@@ -13,6 +13,7 @@ class GeometryAppConan(ConanFile):
 
     def requirements(self):
         self.requires("gtest/1.13.0")
+        self.requires("range-v3/0.12.0")
     
     def layout(self):
         self.folders.source = "."
