@@ -9,7 +9,7 @@ double CrossProduct(Point2D p1, Point2D middle, Point2D p2) {
     return new_p1.Cross(new_p2);
 }
 
-GeometryResult<std::vector<Point2D>> GrahamScan(ReplaceMe points) {
+GeometryResult<std::vector<Point2D>> GrahamScan(ShapeContainer points) {
     return std::unexpected{GeometryError::Unsupported};
 }
 

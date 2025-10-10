@@ -9,26 +9,39 @@
 #include <algorithm>
 #include <print>
 #include <ranges>
+#include <range/v3/view/enumerate.hpp>
 
 using namespace geometry;
 
 namespace rng = std::ranges;
 namespace views = std::ranges::views;
+namespace views_v3 = ranges::views;
 
-void PrintAllIntersections(const Shape &shape, ReplaceMe others) {
+void PrintAllIntersections(const ShapeContainer& shapes) {
     std::println("\n=== Intersections ===");
 
-    /*
-     * Используйте ranges чтобы оставить только фигуры,
-     * поддерживающие возможность находить пересечения между собой
-     *
-     * Затем примените монадический интерфейс для обработки результатов:
-     *     - Пересечение найдено в точке A между фигурами B и C
-     *     - Фигуры B и C не пересекаются
-     */
+    auto intersectible = shapes.shapes | views::filter([](const auto &shape) {
+                             return std::holds_alternative<Line>(shape) || std::holds_alternative<Circle>(shape);
+                         });  // | views_v3::enumerate; - sadly doesn't compile for obscure reasons
+
+    auto intersectible_enum =
+        intersectible | views_v3::enumerate;  // must be an lvalue to use with ranges_v3, otherwise compile err.
+
+    // Print if has intersection
+    rng::for_each(intersectible_enum, [&intersectible](const auto &pair) {
+        auto [i, shape1] = pair;
+        for (auto shape2 : intersectible | views::drop(i + 1)) {
+            if (auto result = intersections::GetIntersectPoint(shape1, shape2); result.has_value()) {
+                std::println("{}", result.value());
+            } else {
+                std::println("-no intersection");
+            }
+        }
+    });
+
 }
 
-void PrintDistancesFromPointToShapes(Point2D p, ReplaceMe shapes) {
+void PrintDistancesFromPointToShapes(Point2D p, ShapeContainer shapes) {
     std::println("\n=== Distance from Point Test ===");
     std::println("Testing point: {} ", p);
 
@@ -39,7 +52,7 @@ void PrintDistancesFromPointToShapes(Point2D p, ReplaceMe shapes) {
      */
 }
 
-void PerformShapeAnalysis(ReplaceMe shapes) {
+void PerformShapeAnalysis(ShapeContainer shapes) {
     std::println("\n=== Shape Analysis ===");
 
     /*
@@ -66,12 +79,16 @@ int main() {
 
     std::println("Generated {} random shapes", shapes.size());
 
+    std::vector<Point2D> vec{{0,0}, {1.223424, 213}, {2.42, 5.24}, {123.2, 3444.1}};
+    std::println("{}", vec);
+    std::println("{:new_line}", vec);
+
     // Выведите индекс каждой фигуры и её высоту
 
     //
     // Вызываем разработанные функции
     //
-    PrintAllIntersections(shapes[0], shapes);
+    PrintAllIntersections(shapes);
 
     PrintDistancesFromPointToShapes(Point2D{10.0, 10.0}, shapes);
 

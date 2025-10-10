@@ -12,7 +12,7 @@ namespace geometry::utils {
 class ShapeGenerator {
 public:
     ShapeGenerator(double min_coord = -100.0, double max_coord = 100.0, double min_size = 1.0, double max_size = 20.0)
-        : gen(20), coord_dist(min_coord, max_coord), size_dist(min_size, max_size), sides_dist(3, 12), type_dist(0, 4) {
+        : gen(std::random_device()()), coord_dist(min_coord, max_coord), size_dist(min_size, max_size), sides_dist(3, 12), type_dist(0, 4) {
     }
 
     Shape GenerateRandomShape() {
@@ -63,7 +63,7 @@ private:
     std::uniform_int_distribution<int> type_dist;
 };
 
-std::vector<std::pair<Shape, Shape>> FindAllCollisions(ReplaceMe shapes) {
+std::vector<std::pair<Shape, Shape>> FindAllCollisions(ShapeContainer shapes) {
     std::vector<std::pair<Shape, Shape>> collisions;
 
     /*
@@ -75,7 +75,7 @@ std::vector<std::pair<Shape, Shape>> FindAllCollisions(ReplaceMe shapes) {
     return collisions;
 }
 
-std::optional<size_t> FindHighestShape(ReplaceMe shapes) {
+std::optional<size_t> FindHighestShape(ShapeContainer shapes) {
 
     /*
      * Используйте библиотеку ranges, чтобы найти самую высокую фигуру

@@ -6,6 +6,12 @@
   },
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "customizations": {
+    "jetbrains": {
+      "settings": {
+        "com.intellij:app:GeneralSettings.autoSaveIfInactive": true,
+        "com.intellij:app:VcsApplicationSettings.show_lst_gutter_markers": false
+      }
+    },
     "vscode": {
       "extensions": [
         "llvm-vs-code-extensions.vscode-clangd",
