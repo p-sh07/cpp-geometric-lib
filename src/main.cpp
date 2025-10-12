@@ -20,21 +20,18 @@ namespace views_v3 = ranges::views;
 void PrintAllIntersections(const ShapeContainer& shapes) {
     std::println("\n=== Intersections ===");
 
-    auto intersectible = shapes.shapes | views::filter([](const auto &shape) {
-                             return std::holds_alternative<Line>(shape) || std::holds_alternative<Circle>(shape);
-                         });  // | views_v3::enumerate; - sadly doesn't compile for obscure reasons
+    //Filter only valid shapes & enum [i, shape] to iterate all pairs efficiently with drop
+    auto intersect_enum = shapes.GetIntersectibleEnum();
 
-    auto intersectible_enum =
-        intersectible | views_v3::enumerate;  // must be an lvalue to use with ranges_v3, otherwise compile err.
-
-    // Print if has intersection
-    rng::for_each(intersectible_enum, [&intersectible](const auto &pair) {
-        auto [i, shape1] = pair;
-        for (auto shape2 : intersectible | views::drop(i + 1)) {
+    rng::for_each(intersect_enum, [&intersect_enum](const auto &pair) {
+        const auto& [i, shape1] = pair;
+        for (const auto& [j, shape2] : intersect_enum | views::drop(i + 1)) {
             if (auto result = intersections::GetIntersectPoint(shape1, shape2); result.has_value()) {
-                std::println("{}", result.value());
-            } else {
-                std::println("-no intersection");
+                std::println("{}[{}] & {}[{}] intersect at: {}",
+                    std::holds_alternative<Line>(shape1) ? "Line"sv : "Circle"sv, i+1,
+                    std::holds_alternative<Line>(shape2) ? "Line"sv : "Circle"sv, j+1,
+                    result.value()
+                );
             }
         }
     });

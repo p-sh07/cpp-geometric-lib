@@ -12,6 +12,8 @@
 #include <variant>
 #include <vector>
 
+#include <range/v3/view/enumerate.hpp>
+
 namespace geometry {
 static constexpr double EPSILON = 10e-9;
 
@@ -107,11 +109,12 @@ struct Triangle {
     Point2D a, b, c;
     Point2D Center() const { return {(a.x + b.x + c.x) / 3.0, (a.y + b.y + c.y) / 3.0}; }
     std::array<Point2D, 3> Vertices() const { return {a, b, c}; }
+    std::vector<Point2D> VerticesVec() const { return {a, b, c}; }
     Lines2D<4> Lines() const { return {{a.x, b.x, c.x, a.x}, {a.y, b.y, c.y, a.y}}; }
     double Area() const { return std::abs((a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y)) / 2.0); }
     double Height() const { return std::max({a.y, b.y, c.y}); }
 
-    BoundingBox BoundBox() {
+    BoundingBox BoundBox() const {
         return {
             std::min({a.x, b.x, c.x}),
             std::min({a.y, b.y, c.y}),
@@ -126,6 +129,7 @@ struct Rectangle {
     double width, height;
 
     std::array<Point2D, 4> Vertices() const { return {bottom_left, {bottom_left.x + width, bottom_left.y}, {bottom_left.x + width, bottom_left.y + height}, {bottom_left.x, bottom_left.y + height}}; }
+    std::vector<Point2D> VerticesVec() const { return {bottom_left, {bottom_left.x + width, bottom_left.y}, {bottom_left.x + width, bottom_left.y + height}, {bottom_left.x, bottom_left.y + height}}; }
     Point2D Center() const { return { bottom_left.x + width / 2.0, bottom_left.y + height / 2.0 }; }
     Lines2D<5> Lines() const {
         const auto v = Vertices();
@@ -157,6 +161,7 @@ struct RegularPolygon {
         return points;
     }
     Lines2DDyn Lines() const { return Lines2DDyn{Vertices()}; }
+    double Height() const { return center_p.y + radius; }
 };
 
 struct Circle {
@@ -169,6 +174,7 @@ struct Circle {
         return {center_p.x - radius, center_p.y - radius, center_p.x + radius, center_p.y + radius};
     }
     double Height() const { return center_p.y + radius; }
+    double Radius() const { return radius; }
     Point2D Center() const { return center_p; }
 
     std::vector<Point2D> Vertices(size_t N = 30) const {
@@ -209,7 +215,7 @@ private:
 
 using Shape = std::variant<Line, Triangle, Rectangle, RegularPolygon, Circle, Polygon>;
 
-enum class GeometryError { Unsupported, NoIntersection, InvalidInput, DegenrateCase, InsufficientPoints };
+enum class GeometryError { Unsupported, NoIntersection, InvalidInput, DegenerateCase, InsufficientPoints };
 
 ///TODO:
 ///Я до конца не могу понять, в чем смысл использовать эту структуру вместо просто vector<Shape>
@@ -217,9 +223,12 @@ enum class GeometryError { Unsupported, NoIntersection, InvalidInput, DegenrateC
 struct ShapeContainer  {
     ShapeContainer(std::vector<Shape> shapes) : shapes(std::move(shapes)) {}
 
-    static bool IsIntersectible(const Shape& shape) {
-        return std::holds_alternative<Line>(shape)
-            || std::holds_alternative<Circle>(shape);
+    auto GetIntersectibleEnum() const {
+        auto intersectible = shapes | std::views::filter([](const auto &shape) {
+                            return std::holds_alternative<Line>(shape) || std::holds_alternative<Circle>(shape);
+                        });  // | views_v3::enumerate; - sadly doesn't compile for obscure reasons
+        //use range_v3 since no enumerate in llvm
+        return intersectible | ranges::views::enumerate;
     };
 
     std::vector<Shape> shapes;

@@ -97,7 +97,7 @@ public:
         double t1 = (-b - discr) / (2 * a);
         double t2 = (-b + discr) / (2 * a);
 
-        std::vector<Point2D> result;  // to support case of two intersections, but return first one for now
+        std::vector<Point2D> result;
 
         if (t1 >= 0 && t1 <= 1) {
             result.push_back(line.start + d * t1);
@@ -125,20 +125,3 @@ inline Result GetIntersectPoint(const Shape& shape1, const Shape& shape2) {
 }
 
 }  // namespace geometry::intersections
-
-/** multilambda example
-* using Value = std::variant<int, double, std::string>;
-
-Value a = 24;
-Value b = 42;
-
-auto result =
-std::visit(Multilambda{[](int l, int r) -> double { return l + r; }, [](double l, double r) { return l + r; },
-[](const auto &, const auto &) -> double {
-throw std::logic_error{"Unsupported type combination"};
-return {};
-}},
-a, b);
-
-std::println("Результат: {}", result);  // 66
-*/

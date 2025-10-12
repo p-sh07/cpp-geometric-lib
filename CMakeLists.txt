@@ -55,6 +55,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_imp)
 file(GLOB TEST_SRC_FILES "${CMAKE_SOURCE_DIR}/tests/*.cpp")
 #file(GLOB PROJECT_SRC_FILES "${CMAKE_SOURCE_DIR}/src/*.cpp")
 
+MESSAGE(WARNING "${TEST_SRC_FILES}")
 add_executable(${PROJECT_NAME}_tests "${TEST_SRC_FILES}")
 target_link_libraries(${PROJECT_NAME}_tests PRIVATE GTest::GTest GTest::Main range-v3::range-v3)
 target_include_directories(${PROJECT_NAME}_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)

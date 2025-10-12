@@ -51,18 +51,18 @@ private:
 
 TEST_P(IntersectionCheck, CheckCorrectIntersections) {
     const auto result = FindIntersection();
-    const auto expected_result = GetExpectedResult();
+    const auto expected = GetExpectedResult();
 
     if (!result.has_value()) {
-        EXPECT_EQ(expected_result, std::nullopt); //both nullopt
+        EXPECT_EQ(expected, std::nullopt); //both nullopt
     } else {
-        ASSERT_TRUE(expected_result.has_value());
-        ASSERT_EQ((*result).size(), (*expected_result).size());
+        ASSERT_TRUE(expected.has_value());
+        ASSERT_EQ((*result).size(), (*expected).size());
 
         //Check double equality
         for (size_t i = 0; i < (*result).size(); ++i) {
-            EXPECT_DOUBLE_EQ((*result).at(i).x, (*expected_result).at(i).x);
-            EXPECT_DOUBLE_EQ((*result).at(i).y, (*expected_result).at(i).y);
+            EXPECT_DOUBLE_EQ((*result).at(i).x, (*expected).at(i).x);
+            EXPECT_DOUBLE_EQ((*result).at(i).y, (*expected).at(i).y);
         }
     }
 }
