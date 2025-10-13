@@ -223,6 +223,10 @@ enum class GeometryError { Unsupported, NoIntersection, InvalidInput, Degenerate
 struct ShapeContainer  {
     ShapeContainer(std::vector<Shape> shapes) : shapes(std::move(shapes)) {}
 
+    auto GetEnum() const {
+        return ranges::views::enumerate(shapes);
+    }
+
     auto GetIntersectibleEnum() const {
         auto intersectible = shapes | std::views::filter([](const auto &shape) {
                             return std::holds_alternative<Line>(shape) || std::holds_alternative<Circle>(shape);
@@ -230,7 +234,7 @@ struct ShapeContainer  {
         //use range_v3 since no enumerate in llvm
         return intersectible | ranges::views::enumerate;
     };
-
+    bool empty() const { return shapes.empty(); }
     std::vector<Shape> shapes;
 
 };

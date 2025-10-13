@@ -65,25 +65,29 @@ private:
 
 std::vector<std::pair<Shape, Shape>> FindAllCollisions(ShapeContainer shapes) {
     std::vector<std::pair<Shape, Shape>> collisions;
+    auto shapes_enum = shapes.GetEnum();
 
-    /*
-     * Используйте библиотеку ranges, чтобы найти все коллизии между фигурами методом BoundingBoxesOverlap
-     *
-     * Также используйте наиболее эффективный метод добавления объектов в collisions
-     */
-
+    std::ranges::for_each(shapes_enum, [&shapes_enum, &collisions](const auto &pair) {
+        const auto& [i, shape1] = pair;
+        for (const auto& [j, shape2] : shapes_enum | std::views::drop(i + 1)) {
+            if (queries::BoundingBoxesOverlap(shape1, shape2)) {
+                collisions.emplace_back(shape1, shape2);
+            }
+        }
+    });
     return collisions;
 }
 
 std::optional<size_t> FindHighestShape(ShapeContainer shapes) {
+    auto max_shape = std::ranges::max_element(shapes.shapes, [](const auto& s1, const auto& s2) {
+        return queries::GetHeight(s1) < queries::GetHeight(s2);
+    });
 
-    /*
-     * Используйте библиотеку ranges, чтобы найти самую высокую фигуру
-     *
-     * Важно: использование ручной итерации по фигурам не разрешается
-     */
+    if (shapes.empty() || max_shape == shapes.shapes.end()) {
+        return std::nullopt;
+    }
 
-    return std::nullopt;
+    return queries::GetHeight(*max_shape);
 }
 
 }  // namespace geometry::utils
