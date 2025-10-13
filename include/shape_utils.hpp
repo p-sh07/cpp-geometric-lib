@@ -11,8 +11,9 @@ namespace geometry::utils {
 
 class ShapeGenerator {
 public:
-    ShapeGenerator(double min_coord = -100.0, double max_coord = 100.0, double min_size = 1.0, double max_size = 20.0)
-        : gen(std::random_device()()), coord_dist(min_coord, max_coord), size_dist(min_size, max_size), sides_dist(3, 12), type_dist(0, 4) {
+    explicit ShapeGenerator(double min_coord = -100.0, double max_coord = 100.0, double min_size = 1.0, double max_size = 20.0)
+        : gen(std::random_device()()), coord_dist(min_coord, max_coord),
+        size_dist(min_size, max_size), sides_dist(3, 12), type_dist(0, 4) {
     }
 
     Shape GenerateRandomShape() {
@@ -20,28 +21,31 @@ public:
         double size = size_dist(gen);
 
         switch (type_dist(gen)) {
-        case 0: {
-            Point2D end{center.x + size, center.y + size};
-            return Line{center, end};
+            case 0: {
+                Point2D end{center.x + size, center.y + size};
+                return Line{center, end};
+            }
+            case 1: {
+                Point2D a{center.x, center.y};
+                Point2D b{center.x + size, center.y};
+                Point2D c{center.x + size / 2, center.y + size};
+                return Triangle{a, b, c};
+            }
+            case 2: {
+                return Rectangle{center, size, size * 0.8};
+            }
+            case 3: {
+                int sides = sides_dist(gen);
+                return RegularPolygon{center, size, sides};
+            }
+            case 4: {
+                return Circle{center, size};
+            }
+            default: {
+                Point2D end{center.x + size, center.y + size};
+                return Line{center, end};
+            }
         }
-        case 1: {
-            Point2D a{center.x, center.y};
-            Point2D b{center.x + size, center.y};
-            Point2D c{center.x + size / 2, center.y + size};
-            return Triangle{a, b, c};
-        }
-        case 2: {
-            return Rectangle{center, size, size * 0.8};
-        }
-        case 3: {
-            int sides = sides_dist(gen);
-            return RegularPolygon{center, size, sides};
-        }
-        case 4: {
-            return Circle{center, size};
-        }
-        }
-        return Circle{center, size};
     }
 
     std::vector<Shape> GenerateShapes(size_t count) {
@@ -63,7 +67,7 @@ private:
     std::uniform_int_distribution<int> type_dist;
 };
 
-std::vector<std::pair<Shape, Shape>> FindAllCollisions(ShapeContainer shapes) {
+inline std::vector<std::pair<Shape, Shape>> FindAllCollisions(ShapeContainer shapes) {
     std::vector<std::pair<Shape, Shape>> collisions;
     auto shapes_enum = shapes.GetEnum();
 
@@ -78,7 +82,7 @@ std::vector<std::pair<Shape, Shape>> FindAllCollisions(ShapeContainer shapes) {
     return collisions;
 }
 
-std::optional<size_t> FindHighestShape(ShapeContainer shapes) {
+inline std::optional<size_t> FindHighestShape(ShapeContainer shapes) {
     auto max_shape = std::ranges::max_element(shapes.shapes, [](const auto& s1, const auto& s2) {
         return queries::GetHeight(s1) < queries::GetHeight(s2);
     });

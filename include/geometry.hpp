@@ -234,7 +234,23 @@ struct ShapeContainer  {
         //use range_v3 since no enumerate in llvm
         return intersectible | ranges::views::enumerate;
     };
+
+    std::optional<std::vector<Point2D>> GetAsPoint2DVec() const {
+        // Verify all shapes are Point2D
+        auto is_point2d = [](const auto& s) { return std::holds_alternative<Point2D>(s); };
+
+        if (!std::ranges::all_of(shapes, is_point2d)) {
+            return std::nullopt;
+        }
+
+        // Transform into vector<Point2D>
+        return shapes | std::views::transform([](const auto& s) { return std::get<Point2D>(s); })
+            | std::ranges::to<std::vector<Point2D>>();
+    }
+
     bool empty() const { return shapes.empty(); }
+    size_t size() const { return shapes.size(); }
+
     std::vector<Shape> shapes;
 
 };
