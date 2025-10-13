@@ -37,37 +37,86 @@ void PrintAllIntersections(const ShapeContainer& shapes) {
     });
 
 }
-
 void PrintDistancesFromPointToShapes(Point2D p, ShapeContainer shapes) {
     std::println("\n=== Distance from Point Test ===");
-    std::println("Testing point: {} ", p);
+    std::println("Testing point: {}", p);
 
-    /*
-     * Используйте ranges чтобы выбрать любые 5 фигур из списка.
-     * Затем найдите расстояния от заданной точки до всех выбранных фигур.
-     * Выведите результат в формате "Расстояние от точки P до фигуры S равно D"
-     */
+    // Take any 5 shapes
+    auto limited_shapes = shapes | views::take(5);
+
+    // Compute distances and print results
+    rng::for_each(limited_shapes, [p](const auto& shape) {
+        double dist = DistanceToPoint(shape, p);
+        std::string_view type =
+            std::visit([](auto const& s) -> std::string_view {
+                using T = std::decay_t<decltype(s)>;
+                if constexpr (std::is_same_v<T, Line>) return "Line";
+                else if constexpr (std::is_same_v<T, Triangle>) return "Triangle";
+                else if constexpr (std::is_same_v<T, Rectangle>) return "Rectangle";
+                else if constexpr (std::is_same_v<T, RegularPolygon>) return "RegularPolygon";
+                else if constexpr (std::is_same_v<T, Circle>) return "Circle";
+                else if constexpr (std::is_same_v<T, Polygon>) return "Polygon";
+                else return "Unknown";
+            }, shape);
+
+        std::println("Расстояние от точки {} до фигуры {} равно {:.4f}", p, type, dist);
+    });
 }
 
 void PerformShapeAnalysis(ShapeContainer shapes) {
     std::println("\n=== Shape Analysis ===");
 
-    /*
-     * Используйте ranges и созданные классы чтобы:
-     *     - Найти все пересечения между фигурами используя метод Bounding Box
-     *     - Найти самую высокую фигуру (чья высота наибольшая)
-     *     - Вывести расстояние между любыми двумя фигурами, которые поддерживают данную функциональность
-     */
+    // --- Find all collisions using bounding boxes ---
+    auto collisions = utils::FindAllCollisions(shapes);
+    if (collisions.empty()) {
+        std::println("Нет пересечений между фигурами.");
+    } else {
+        std::println("Обнаружено {} пересечений:", collisions.size());
+        for (const auto& [s1, s2] : collisions) {
+            std::println("  - {} & {} пересекаются",
+                std::visit([](auto const& s){ return typeid(s).name(); }, s1),
+                std::visit([](auto const& s){ return typeid(s).name(); }, s2));
+        }
+    }
+
+    // --- Find the tallest shape ---
+    if (auto tallest = utils::FindHighestShape(shapes)) {
+        std::println("Самая высокая фигура: #{}", *tallest + 1);
+    } else {
+        std::println("Не удалось определить самую высокую фигуру.");
+    }
+
+    if (shapes.size() >= 2) {
+        if (auto dist = queries::DistanceBetweenShapes(shapes[0], shapes[1]); dist.has_value()) {
+            std::println("Расстояние между фигурами 1 и 2: {:.4f}", dist.value());
+        } else {
+            std::println("Расстояние между фигурами 1 и 2 не поддерживается.");
+        }
+    }
 }
 
 void PerformExtraShapeAnalysis(std::span<const Shape> shapes) {
     std::println("\n=== Shape Extra Analysis ===");
 
-    /*
-     * Используйте ranges и созданные классы чтобы:
-     *     - Вывести 3 любые фигуры, которые находятся выше 50.0
-     *     - Вывести фигуры с наименьшей и с наибольшей высотами
-     */
+    // --- Shapes higher than 50.0 ---
+    auto high_shapes = shapes
+        | views::filter([](auto const& pair) {
+            const auto& [i, s] = pair;
+            return GetHeight(s) > 50.0;
+        })
+        | views::take(3);
+
+    for (auto s : high_shapes)
+        std::println("-Высота: {:.2f}", queries::GetHeight(s));
+
+    // --- Shape with minimum and maximum height ---
+    if (!shapes.empty()) {
+        auto min_it = rng::min_element(shapes, {}, [](auto const& s) { return queries::GetHeight(s); });
+        auto max_it = rng::max_element(shapes, {}, [](auto const& s) { return queries::GetHeight(s); });
+
+        std::println("Минимальная высота: {:.2f}", queries::GetHeight(*min_it));
+        std::println("Максимальная высота: {:.2f}", queries::GetHeight(*max_it));
+    }
 }
 
 int main() {

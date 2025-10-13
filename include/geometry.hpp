@@ -227,6 +227,14 @@ struct ShapeContainer  {
         return ranges::views::enumerate(shapes);
     }
 
+    Shape& operator[](size_t i) {
+        return shapes[i];
+    }
+
+    const Shape& operator[](size_t i) const {
+        return shapes[i];
+    }
+
     auto GetIntersectibleEnum() const {
         auto intersectible = shapes | std::views::filter([](const auto &shape) {
                             return std::holds_alternative<Line>(shape) || std::holds_alternative<Circle>(shape);
@@ -235,18 +243,20 @@ struct ShapeContainer  {
         return intersectible | ranges::views::enumerate;
     };
 
-    std::optional<std::vector<Point2D>> GetAsPoint2DVec() const {
-        // Verify all shapes are Point2D
-        auto is_point2d = [](const auto& s) { return std::holds_alternative<Point2D>(s); };
+    //TODO: include Point2D into Shape?
 
-        if (!std::ranges::all_of(shapes, is_point2d)) {
-            return std::nullopt;
-        }
-
-        // Transform into vector<Point2D>
-        return shapes | std::views::transform([](const auto& s) { return std::get<Point2D>(s); })
-            | std::ranges::to<std::vector<Point2D>>();
-    }
+    // inline std::optional<std::vector<Point2D>> GetAsPoint2DVec() const {
+    //     // Verify all shapes are Point2D
+    //     // auto is_point2d =
+    //
+    //     if (!std::ranges::all_of(shapes, [](const Shape& s) { return std::holds_alternative<Point2D>(s); })) {
+    //         return std::nullopt;
+    //     }
+    //
+    //     // Transform into vector<Point2D>
+    //     return shapes | std::views::transform([](const auto& s) { return std::get<Point2D>(s); })
+    //         | std::ranges::to<std::vector<Point2D>>();
+    // }
 
     bool empty() const { return shapes.empty(); }
     size_t size() const { return shapes.size(); }
