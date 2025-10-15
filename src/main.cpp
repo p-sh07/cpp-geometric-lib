@@ -17,19 +17,20 @@ namespace rng = std::ranges;
 namespace views = std::ranges::views;
 namespace views_v3 = ranges::views;
 
-void PrintAllIntersections(const ShapeContainer& shapes) {
+void PrintAllIntersections(ShapeContainer shapes) {
     std::println("\n=== Intersections ===");
 
     //Filter only valid shapes & enum [i, shape] to iterate all pairs efficiently with drop
-    auto intersect_enum = shapes.GetIntersectibleEnum();
+    auto intersectible = shapes.GetIntersectible();
+    const auto intersect_enum = intersectible | ranges::views::enumerate; //TODO: this doesn't work when passed from inside a member function, relies on source view still being in scope?
 
     rng::for_each(intersect_enum, [&intersect_enum](const auto &pair) {
         const auto& [i, shape1] = pair;
         for (const auto& [j, shape2] : intersect_enum | views::drop(i + 1)) {
             if (auto result = intersections::GetIntersectPoint(shape1, shape2); result.has_value()) {
-                std::println("{}[{}] & {}[{}] intersect at: {}",
-                    std::holds_alternative<Line>(shape1) ? "Line"sv : "Circle"sv, i+1,
-                    std::holds_alternative<Line>(shape2) ? "Line"sv : "Circle"sv, j+1,
+                std::println("{}[{}] & {}[{}] пересекаются в: {}",
+                    utils::PrintShapeName(shape1), i+1,
+                    utils::PrintShapeName(shape2), j+1,
                     result.value()
                 );
             }
@@ -37,61 +38,52 @@ void PrintAllIntersections(const ShapeContainer& shapes) {
     });
 
 }
-void PrintDistancesFromPointToShapes(Point2D p, ShapeContainer shapes) {
+void PrintDistancesFromPointToShapes(Point2D p, const ShapeContainer& shapes) {
     std::println("\n=== Distance from Point Test ===");
     std::println("Testing point: {}", p);
 
-    // Take any 5 shapes
-    auto limited_shapes = shapes | views::take(5);
-
-    // Compute distances and print results
-    rng::for_each(limited_shapes, [p](const auto& shape) {
-        double dist = DistanceToPoint(shape, p);
-        std::string_view type =
-            std::visit([](auto const& s) -> std::string_view {
-                using T = std::decay_t<decltype(s)>;
-                if constexpr (std::is_same_v<T, Line>) return "Line";
-                else if constexpr (std::is_same_v<T, Triangle>) return "Triangle";
-                else if constexpr (std::is_same_v<T, Rectangle>) return "Rectangle";
-                else if constexpr (std::is_same_v<T, RegularPolygon>) return "RegularPolygon";
-                else if constexpr (std::is_same_v<T, Circle>) return "Circle";
-                else if constexpr (std::is_same_v<T, Polygon>) return "Polygon";
-                else return "Unknown";
-            }, shape);
-
-        std::println("Расстояние от точки {} до фигуры {} равно {:.4f}", p, type, dist);
+    // Compute distances and print results for 5 shapes
+    rng::for_each(shapes.GetSample(5), [p](const auto& shape) {
+        std::println("Расстояние от точки {} до фигуры {} равно {:.2f}", p,
+            utils::PrintShapeName(shape), queries::DistanceToPoint(shape, p)
+        );
     });
 }
 
-void PerformShapeAnalysis(ShapeContainer shapes) {
+void PerformShapeAnalysis(const ShapeContainer& shapes) {
     std::println("\n=== Shape Analysis ===");
 
-    // --- Find all collisions using bounding boxes ---
     auto collisions = utils::FindAllCollisions(shapes);
     if (collisions.empty()) {
-        std::println("Нет пересечений между фигурами.");
+        std::println("Нет коллизий между фигурами");
     } else {
-        std::println("Обнаружено {} пересечений:", collisions.size());
+        std::println("Обнаружено {} коллизий:", collisions.size());
         for (const auto& [s1, s2] : collisions) {
-            std::println("  - {} & {} пересекаются",
-                std::visit([](auto const& s){ return typeid(s).name(); }, s1),
-                std::visit([](auto const& s){ return typeid(s).name(); }, s2));
+            std::println("  - {} & {}", utils::PrintShapeName(s1), utils::PrintShapeName(s2));
         }
     }
 
-    // --- Find the tallest shape ---
-    if (auto tallest = utils::FindHighestShape(shapes)) {
-        std::println("Самая высокая фигура: #{}", *tallest + 1);
+    if (auto height = utils::FindHighestShape(shapes)) {
+        std::println("Высота самой высокой фигуры (y_max): {}", *height);
     } else {
         std::println("Не удалось определить самую высокую фигуру.");
     }
 
     if (shapes.size() >= 2) {
-        if (auto dist = queries::DistanceBetweenShapes(shapes[0], shapes[1]); dist.has_value()) {
-            std::println("Расстояние между фигурами 1 и 2: {:.4f}", dist.value());
-        } else {
-            std::println("Расстояние между фигурами 1 и 2 не поддерживается.");
-        }
+        const auto distance_enum = shapes.data_ | ranges::views::enumerate;
+
+        rng::for_each(distance_enum, [distance_enum](const auto& pair) {
+            const auto& [i, shape1] = pair;
+            for (const auto& [j, shape2] : distance_enum | views::drop(i + 1)) {
+                if (auto result = queries::DistanceBetweenShapes(shape1, shape2)) {
+                    std::println("Расстояние между {}[{}] & {}[{}] == {:.4f}",
+                        utils::PrintShapeName(shape1), i+1,
+                        utils::PrintShapeName(shape2), j+1,
+                        result.value()
+                    );
+                }
+            }
+        });
     }
 }
 
@@ -100,14 +92,12 @@ void PerformExtraShapeAnalysis(std::span<const Shape> shapes) {
 
     // --- Shapes higher than 50.0 ---
     auto high_shapes = shapes
-        | views::filter([](auto const& pair) {
-            const auto& [i, s] = pair;
-            return GetHeight(s) > 50.0;
-        })
+        | views::filter([](auto const& s) { return queries::GetHeight(s) > 50.0; })
         | views::take(3);
 
-    for (auto s : high_shapes)
+    for (auto s : high_shapes) {
         std::println("-Высота: {:.2f}", queries::GetHeight(s));
+    }
 
     // --- Shape with minimum and maximum height ---
     if (!shapes.empty()) {
@@ -121,63 +111,46 @@ void PerformExtraShapeAnalysis(std::span<const Shape> shapes) {
 
 int main() {
     utils::ShapeGenerator generator(-50.0, 50.0, 5.0, 25.0);
-    std::vector<Shape> shapes = generator.GenerateShapes(15);
+    ShapeContainer shapes(generator.GenerateShapes(15));
 
-    std::println("Generated {} random shapes", shapes.size());
+    std::println("Сгенерировано {} случайных фигур", shapes.size());
 
-    std::vector<Point2D> vec{{0,0}, {1.223424, 213}, {2.42, 5.24}, {123.2, 3444.1}};
-    std::println("{}", vec);
-    std::println("{:new_line}", vec);
-
-    // Выведите индекс каждой фигуры и её высоту
-
-    //
-    // Вызываем разработанные функции
-    //
     PrintAllIntersections(shapes);
-
     PrintDistancesFromPointToShapes(Point2D{10.0, 10.0}, shapes);
-
     PerformShapeAnalysis(shapes);
+    PerformExtraShapeAnalysis(shapes.data_);
 
-    PerformExtraShapeAnalysis(shapes);
+    geometry::visualization::Draw(shapes.data_);
 
-    //
-    // Рисуем все фигуры
-    //
-    // Важно: после изучения графика - нажмите Enter чтобы продолжить выполнение и построить 2ой график
-    //
-    geometry::visualization::Draw(shapes);
 
-    //
-    // Формируем список из вершин всех фигур
-    //
-    std::vector<Point2D> points;
+    //========= Convex hull ===========
+    std::vector<Point2D> points = queries::GetShapeVertices(shapes);
 
-    /* ваш код здесь */
+    if (auto hull_result = convex_hull::GrahamScan(points); hull_result.has_value()) {
+        std::vector<Point2D> hull = std::move(hull_result.value());
+        Polygon hull_polygon(std::move(hull), BboxFromPoints(hull));
 
-    //
-    // Находим список точек, для построения выпуклой оболочки - convex hull - алгоритмом Грэхема
-    // Создаём из них объект класса `Polygon` и добавляем его в список shapes
-    // Рисуем все фигуры
-    //
+        shapes.data_.push_back(Shape{hull_polygon});
 
-    /* ваш код здесь */
-
-    //
-    // после изучения графика - нажмите Enter чтобы продолжить выполнение и построить 3ий график
-    //
-
-    {
-        std::vector<Point2D> points = {{0, 0}, {10, 0}, {5, 8}, {15, 5}, {2, 12}};
-
-        //
-        // Используйте список точек points или свой, чтобы
-        // выполнить алгоритм триангуляции Делоне алгоритмом Боуэра-Ватсона
-        //
-        // После успешного завершения алгоритма - выведите результат для проверки
-        // используя geometry::visualization::Draw
-        //
+        visualization::Draw(shapes.data_);
+    } else {
+        std::println("Ошибка при построении выпуклой оболочки: {}", static_cast<int>(hull_result.error()));
     }
-    return 0;
+
+    //========= Delaunay triangulation ===========
+    std::vector<Point2D> points_dln = generator.GeneratePoints();
+
+    if (auto triangulation = triangulation::DelaunayTriangulation(points_dln); triangulation.has_value()) {
+        const auto& triangles = triangulation.value();
+
+        std::vector<Shape> delaunay_shapes;
+        for (const auto& tri : triangles) {
+            delaunay_shapes.push_back(Shape{Triangle{tri.a, tri.b, tri.c}});
+        }
+
+        visualization::Draw(delaunay_shapes);
+    } else {
+        //TODO: Geometry error string
+        std::println("Ошибка триангуляции Делоне: {}", static_cast<int>(triangulation.error()));
+    }
 }

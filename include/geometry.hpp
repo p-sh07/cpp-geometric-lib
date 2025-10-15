@@ -8,6 +8,7 @@
 #include <numeric>
 #include <optional>
 #include <print>
+#include <random>
 #include <ranges>
 #include <variant>
 #include <vector>
@@ -91,6 +92,19 @@ struct BoundingBox {
 
 };
 
+inline BoundingBox BboxFromPoints(std::vector<Point2D> points) {
+    if (points.empty()) {
+        return {};
+    }
+
+    auto [min_x_it, max_x_it] = std::minmax_element(points.begin(), points.end(),
+        [](const Point2D& a, const Point2D& b) { return a.x < b.x; });
+    auto [min_y_it, max_y_it] = std::minmax_element(points.begin(), points.end(),
+        [](const Point2D& a, const Point2D& b) { return a.y < b.y; });
+
+    return { min_x_it->x, min_y_it->y, max_x_it->x, max_y_it->y};
+}
+
 struct Line {
     Point2D start, end;
 
@@ -114,14 +128,7 @@ struct Triangle {
     double Area() const { return std::abs((a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y)) / 2.0); }
     double Height() const { return std::max({a.y, b.y, c.y}); }
 
-    BoundingBox BoundBox() const {
-        return {
-            std::min({a.x, b.x, c.x}),
-            std::min({a.y, b.y, c.y}),
-            std::max({a.x, b.x, c.x}),
-            std::max({a.y, b.y, c.y})
-        };
-    }
+    BoundingBox BoundBox() const { return BboxFromPoints(VerticesVec()); }
 };
 
 struct Rectangle {
@@ -137,6 +144,9 @@ struct Rectangle {
     }
     double Height() const {
         return std::ranges::max(Vertices(), {}, &Point2D::y).y; //Y value of point with highest Y
+    }
+    BoundingBox BoundBox() const {
+        return {bottom_left.x, bottom_left.y, bottom_left.x + width, bottom_left.y + height};
     }
 };
 
@@ -162,6 +172,8 @@ struct RegularPolygon {
     }
     Lines2DDyn Lines() const { return Lines2DDyn{Vertices()}; }
     double Height() const { return center_p.y + radius; }
+
+    BoundingBox BoundBox() const { return BboxFromPoints(Vertices()); }
 };
 
 struct Circle {
@@ -208,6 +220,8 @@ public:
         return std::ranges::max(points_, {}, &Point2D::y).y;
     }
 
+    BoundingBox BoundBox() const { return bounding_box_; }
+
 private:
     std::vector<Point2D> points_;
     BoundingBox bounding_box_;
@@ -220,27 +234,37 @@ enum class GeometryError { Unsupported, NoIntersection, InvalidInput, Degenerate
 ///TODO:
 ///Я до конца не могу понять, в чем смысл использовать эту структуру вместо просто vector<Shape>
 ///Наугад добавил в нее пару вспомогательных методов для функций в main
+///P.S. Заметил, что в одном месте эта структура используется для точек, подразумевается возможность поддерживать как vector<Shape> так и vector<Point2D>?
 struct ShapeContainer  {
-    ShapeContainer(std::vector<Shape> shapes) : shapes(std::move(shapes)) {}
+    explicit ShapeContainer(std::vector<Shape> shapes)
+    : data_(std::move(shapes)) //should copy
+    {}
 
     auto GetEnum() const {
-        return ranges::views::enumerate(shapes);
+        return ranges::views::enumerate(data_);
+    }
+
+    std::vector<Shape> GetSample(size_t n = 5) const {
+        std::vector<Shape> result;
+        result.reserve(n);
+        auto gen = std::mt19937{std::random_device{}()};
+        std::ranges::sample(data_, std::back_inserter(result), n, gen);
+        return result;
     }
 
     Shape& operator[](size_t i) {
-        return shapes[i];
+        return data_[i];
     }
 
     const Shape& operator[](size_t i) const {
-        return shapes[i];
+        return data_[i];
     }
 
-    auto GetIntersectibleEnum() const {
-        auto intersectible = shapes | std::views::filter([](const auto &shape) {
+    auto GetIntersectible() const {
+        return data_ | std::views::filter([](const auto &shape) {
                             return std::holds_alternative<Line>(shape) || std::holds_alternative<Circle>(shape);
                         });  // | views_v3::enumerate; - sadly doesn't compile for obscure reasons
-        //use range_v3 since no enumerate in llvm
-        return intersectible | ranges::views::enumerate;
+
     };
 
     //TODO: include Point2D into Shape?
@@ -258,10 +282,10 @@ struct ShapeContainer  {
     //         | std::ranges::to<std::vector<Point2D>>();
     // }
 
-    bool empty() const { return shapes.empty(); }
-    size_t size() const { return shapes.size(); }
+    bool empty() const { return data_.empty(); }
+    size_t size() const { return data_.size(); }
 
-    std::vector<Shape> shapes;
+    std::vector<Shape> data_;
 
 };
 

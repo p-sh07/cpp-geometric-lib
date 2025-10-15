@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <optional>
 #include <variant>
+#include <iostream>
 
 #include "intersections.hpp"
 
@@ -158,8 +159,9 @@ inline BoundingBox GetBoundBox(const Shape& shape) {
                           [](const Line& l) { return l.BoundBox(); },
                           [](const Triangle& t) { return t.BoundBox(); },
                           [](const Circle& c) { return c.BoundBox(); },
-                          //[](const Rectangle& r){ return r.BoundBox(); }, //TODO?
-                          //[](const Polygon& p){ return p.BoundBox(); },
+                          [](const Rectangle& r){ return r.BoundBox(); },
+                          [](const Polygon& p){ return p.BoundBox(); },
+                          [](const RegularPolygon& p){ return p.BoundBox(); },
                           [](auto&&) -> BoundingBox { throw std::logic_error{"Unsupported value"}; }
                       }, shape);
 }
@@ -178,11 +180,42 @@ inline double GetHeight(const Shape& shape) {
                       }, shape);
 }
 
+inline std::vector<Point2D> GetVertices(const Shape& shape) {
+    //cannot use c++26 shape.visit in llvm...
+    return std::visit(Multilambda{
+                          [](const Line& l) { return std::vector<Point2D>{l.start, l.end}; },
+                          [](const Triangle& t) { return t.VerticesVec(); },
+                          [](const Rectangle& r) { return r.VerticesVec(); },
+                          [](const Circle& c) { return c.Vertices(); },
+                          [](const Polygon& p) { return p.Vertices(); },
+                          [](const RegularPolygon& rp) { return rp.Vertices(); },
+                          [](auto&&) -> double { throw std::logic_error{"Unsupported value"}; }
+                      }, shape);
+}
+
 inline bool BoundingBoxesOverlap(const Shape& shape1, const Shape& shape2) {
-    return GetBoundBox(shape1).Overlaps(GetBoundBox(shape2));
+    try {
+        return GetBoundBox(shape1).Overlaps(GetBoundBox(shape2));
+    } catch (std::logic_error& err) {
+        //TODO: std::expected
+        std::println(std::cerr, "Bounding box overlap error: {}", err.what());
+        return false;
+    }
 }
 
 inline std::optional<double> DistanceBetweenShapes(const Shape& shape1, const Shape& shape2) {
     return std::visit(ShapeToShapeDistanceVisitor{}, shape1, shape2);
+}
+
+inline std::vector<Point2D> GetShapeVertices(const ShapeContainer& shapes) {
+    std::vector<Point2D> result;
+    for (const auto& shape : shapes.data_) {
+        try {
+            result.append_range(std::move(GetVertices(shape)));
+        } catch (std::exception& ex) {
+            std::println(std::cerr, "GetVertices error: {}", ex.what());
+        }
+    }
+    return result;
 }
 } // namespace geometry::queries

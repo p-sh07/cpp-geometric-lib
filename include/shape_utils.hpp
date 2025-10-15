@@ -16,6 +16,10 @@ public:
         size_dist(min_size, max_size), sides_dist(3, 12), type_dist(0, 4) {
     }
 
+    Point2D GenerateRandomPoint() {
+        return{coord_dist(gen), coord_dist(gen)};
+    }
+
     Shape GenerateRandomShape() {
         Point2D center{coord_dist(gen), coord_dist(gen)};
         double size = size_dist(gen);
@@ -49,14 +53,19 @@ public:
     }
 
     std::vector<Shape> GenerateShapes(size_t count) {
-        std::vector<Shape> shapes;
-        shapes.reserve(count);
+        //TODO: or use generate_n?
+        return std::views::iota(0u, count)
+            | std::views::transform([this](auto) { return GenerateRandomShape(); })
+            | std::ranges::to<std::vector>();
+    }
 
-        for (auto _ : std::views::iota(0u, count)) {
-            shapes.push_back(GenerateRandomShape());
-        }
-
-        return shapes;
+    //Generates from 1 to 20 random pts
+    std::vector<Point2D> GeneratePoints(size_t max_count = 20) {
+        std::uniform_int_distribution<size_t> rand_count(1u, max_count);
+        auto count = rand_count(gen);
+        return std::views::iota(0u, count)
+            | std::views::transform([this](auto) { return GenerateRandomPoint(); })
+            | std::ranges::to<std::vector>();
     }
 
 private:
@@ -83,15 +92,25 @@ inline std::vector<std::pair<Shape, Shape>> FindAllCollisions(ShapeContainer sha
 }
 
 inline std::optional<size_t> FindHighestShape(ShapeContainer shapes) {
-    auto max_shape = std::ranges::max_element(shapes.shapes, [](const auto& s1, const auto& s2) {
+    auto max_shape = std::ranges::max_element(shapes.data_, [](const auto& s1, const auto& s2) {
         return queries::GetHeight(s1) < queries::GetHeight(s2);
     });
 
-    if (shapes.empty() || max_shape == shapes.shapes.end()) {
+    if (shapes.empty() || max_shape == shapes.data_.end()) {
         return std::nullopt;
     }
 
     return queries::GetHeight(*max_shape);
+}
+
+inline std::string_view PrintShapeName(const Shape& shape) {
+    if (std::holds_alternative<Line>(shape)) return "Line";
+    if (std::holds_alternative<Triangle>(shape)) return "Triangle";
+    if (std::holds_alternative<Rectangle>(shape)) return "Rectangle";
+    if (std::holds_alternative<RegularPolygon>(shape)) return "RegularPolygon";
+    if (std::holds_alternative<Circle>(shape)) return "Circle";
+    if (std::holds_alternative<Polygon>(shape)) return "Polygon";
+    return "Unknown";
 }
 
 }  // namespace geometry::utils
