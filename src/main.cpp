@@ -90,7 +90,7 @@ void PerformShapeAnalysis(const ShapeContainer& shapes) {
 void PerformExtraShapeAnalysis(std::span<const Shape> shapes) {
     std::println("\n=== Shape Extra Analysis ===");
 
-    // --- Shapes higher than 50.0 ---
+    // Shapes higher than 50.0
     auto high_shapes = shapes
         | views::filter([](auto const& s) { return queries::GetHeight(s) > 50.0; })
         | views::take(3);
@@ -99,7 +99,7 @@ void PerformExtraShapeAnalysis(std::span<const Shape> shapes) {
         std::println("-Высота: {:.2f}", queries::GetHeight(s));
     }
 
-    // --- Shape with minimum and maximum height ---
+    // Shape with minimum and maximum height
     if (!shapes.empty()) {
         auto min_it = rng::min_element(shapes, {}, [](auto const& s) { return queries::GetHeight(s); });
         auto max_it = rng::max_element(shapes, {}, [](auto const& s) { return queries::GetHeight(s); });
@@ -120,37 +120,27 @@ int main() {
     PerformShapeAnalysis(shapes);
     PerformExtraShapeAnalysis(shapes.data_);
 
-    geometry::visualization::Draw(shapes.data_);
+    visualization::Draw(shapes.data_);
 
 
     //========= Convex hull ===========
-    std::vector<Point2D> points = queries::GetShapeVertices(shapes);
-
-    if (auto hull_result = convex_hull::GrahamScan(points); hull_result.has_value()) {
-        std::vector<Point2D> hull = std::move(hull_result.value());
-        Polygon hull_polygon(std::move(hull), BboxFromPoints(hull));
-
-        shapes.data_.push_back(Shape{hull_polygon});
-
+    if (auto hull_result = convex_hull::GrahamScan(queries::GetAllShapeVertices(shapes))) {
+        //create a polygon from resulting points
+        shapes.data_.push_back(Shape{Polygon{*hull_result, BboxFromPoints(*hull_result)}});
         visualization::Draw(shapes.data_);
     } else {
-        std::println("Ошибка при построении выпуклой оболочки: {}", static_cast<int>(hull_result.error()));
+        std::println("Ошибка при построении выпуклой оболочки: {}", GeometryErrorString[static_cast<size_t>(hull_result.error())]);
     }
 
     //========= Delaunay triangulation ===========
-    std::vector<Point2D> points_dln = generator.GeneratePoints();
-
-    if (auto triangulation = triangulation::DelaunayTriangulation(points_dln); triangulation.has_value()) {
-        const auto& triangles = triangulation.value();
-
-        std::vector<Shape> delaunay_shapes;
-        for (const auto& tri : triangles) {
-            delaunay_shapes.push_back(Shape{Triangle{tri.a, tri.b, tri.c}});
-        }
+    if (auto triangulation = triangulation::DelaunayTriangulation(generator.GeneratePoints(20))) {
+        //Make Shape triangles from delaunay triangles
+        std::vector<Shape> delaunay_shapes = *triangulation
+            | std::views::transform([](const auto& t) { return Shape{Triangle{t.a, t.b, t.c}}; })
+            | std::ranges::to<std::vector>();
 
         visualization::Draw(delaunay_shapes);
     } else {
-        //TODO: Geometry error string
-        std::println("Ошибка триангуляции Делоне: {}", static_cast<int>(triangulation.error()));
+        std::println("Ошибка триангуляции Делоне: {}", GeometryErrorString[static_cast<size_t>(triangulation.error())]);
     }
 }

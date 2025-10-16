@@ -17,6 +17,7 @@
 
 namespace geometry {
 static constexpr double EPSILON = 10e-9;
+using std::literals::operator ""sv;
 
 struct Point2D {
     double x, y;
@@ -227,9 +228,13 @@ private:
     BoundingBox bounding_box_;
 };
 
+
 using Shape = std::variant<Line, Triangle, Rectangle, RegularPolygon, Circle, Polygon>;
 
 enum class GeometryError { Unsupported, NoIntersection, InvalidInput, DegenerateCase, InsufficientPoints };
+static constexpr std::array GeometryErrorString {
+    "Unsupported"sv, "NoIntersection"sv, "InvalidInput"sv, "DegenerateCase"sv, "InsufficientPoints"sv
+};
 
 ///TODO:
 ///Я до конца не могу понять, в чем смысл использовать эту структуру вместо просто vector<Shape>

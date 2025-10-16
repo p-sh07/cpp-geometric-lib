@@ -27,8 +27,6 @@ double GetDistanceToLine(const Point2D& point, const Line& line) {
 
 /*
  * Класс для поиска расстояния от точки до фигуры
- *
- * Требуется организовать возможность нахождения расстояния для всех возможных фигур типа-суммы Shape
  */
 struct PointToShapeDistanceVisitor {
     Point2D point;
@@ -147,9 +145,7 @@ struct ShapeToShapeDistanceVisitor {
 
 };
 
-/*
- * Функции-помощники
- */
+//========== Helper functions =========
 inline double DistanceToPoint(const Shape& shape, const Point2D& point) {
     return std::visit(PointToShapeDistanceVisitor{point}, shape);
 }
@@ -181,7 +177,6 @@ inline double GetHeight(const Shape& shape) {
 }
 
 inline std::vector<Point2D> GetVertices(const Shape& shape) {
-    //cannot use c++26 shape.visit in llvm...
     return std::visit(Multilambda{
                           [](const Line& l) { return std::vector<Point2D>{l.start, l.end}; },
                           [](const Triangle& t) { return t.VerticesVec(); },
@@ -207,7 +202,7 @@ inline std::optional<double> DistanceBetweenShapes(const Shape& shape1, const Sh
     return std::visit(ShapeToShapeDistanceVisitor{}, shape1, shape2);
 }
 
-inline std::vector<Point2D> GetShapeVertices(const ShapeContainer& shapes) {
+inline std::vector<Point2D> GetAllShapeVertices(const ShapeContainer& shapes) {
     std::vector<Point2D> result;
     for (const auto& shape : shapes.data_) {
         try {

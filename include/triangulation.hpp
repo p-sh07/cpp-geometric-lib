@@ -171,7 +171,7 @@ inline GeometryResult<std::vector<DelaunayTriangle>> DelaunayTriangulation(std::
         }
     }
 
-    // 5) Remove triangles that share a vertex with super-triangle
+    // 5.Remove triangles that share a vertex with super-triangle
     auto is_super_vertex = [&](const Point2D& p) {
         return (std::abs(p.x - pA.x) < EPSILON && std::abs(p.y - pA.y) < EPSILON) ||
                (std::abs(p.x - pB.x) < EPSILON && std::abs(p.y - pB.y) < EPSILON) ||
@@ -181,8 +181,7 @@ inline GeometryResult<std::vector<DelaunayTriangle>> DelaunayTriangulation(std::
     triangulation.erase(std::remove_if(triangulation.begin(), triangulation.end(),
                                        [&](const DelaunayTriangle& t) {
                                            return is_super_vertex(t.a) || is_super_vertex(t.b) || is_super_vertex(t.c);
-                                       }),
-                        triangulation.end());
+                                       }), triangulation.end());
 
     if (triangulation.empty()) return std::unexpected(GeometryError::DegenerateCase);
 
