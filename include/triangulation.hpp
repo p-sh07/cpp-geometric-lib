@@ -6,7 +6,6 @@
 #include <vector>
 
 namespace geometry::triangulation {
-static constexpr double EPSILON = 1e-10;
 
 struct DelaunayTriangle {
     Point2D a, b, c;

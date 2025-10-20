@@ -64,7 +64,7 @@ void Draw(std::span<geometry::Shape> shapes) {
     f->show();
 }
 
-void Draw(std::span<geometry::triangulation::DelaunayTriangle> triangles) {
+void Draw(std::span<triangulation::DelaunayTriangle> triangles) {
     using namespace geometry;
     using namespace matplot;
 

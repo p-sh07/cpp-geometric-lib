@@ -69,17 +69,17 @@ INSTANTIATE_TEST_SUITE_P(
         // Point2D–Polygon
         std::make_tuple(
             Point2D{0.5, 0.5},
-            Shape{Polygon( std::vector<Point2D>{{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}}, BoundingBox{0.0, 0.0, 1.0, 1.0})},
+            Shape{Polygon( std::vector<Point2D>{{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}})},
             0.5
         ),
         std::make_tuple(
             Point2D{2.0, 2.0},
-            Shape{Polygon(std::vector<Point2D>{{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}}, BoundingBox{0.0, 0.0, 1.0, 1.0})},
+            Shape{Polygon(std::vector<Point2D>{{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}})},
             std::sqrt(2.0)
         ),
         std::make_tuple(
             Point2D{-1.0, 0.5},
-            Shape{Polygon(std::vector<Point2D>{{0.0, 0.0}, {2.0, 0.0}, {2.0, 2.0}, {0.0, 2.0}},BoundingBox{0.0, 0.0, 2.0, 2.0})},
+            Shape{Polygon(std::vector<Point2D>{{0.0, 0.0}, {2.0, 0.0}, {2.0, 2.0}, {0.0, 2.0}})},
             1.0
         )
     )
@@ -175,7 +175,7 @@ TEST_P(QueryHelperFunctions, HelperFucntionsCheck) {
     EXPECT_DOUBLE_EQ(box.max_y, expected_box.max_y);
 
     // GetHeight
-    EXPECT_DOUBLE_EQ(GetHeight(shape1), expected_height);
+    EXPECT_DOUBLE_EQ(ComputeHeight(shape1), expected_height);
 
     // BoundingBoxesOverlap
     EXPECT_EQ(BoundingBoxesOverlap(shape1, shape2), expected_overlap);
@@ -184,7 +184,7 @@ TEST_P(QueryHelperFunctions, HelperFucntionsCheck) {
 //TODO: bound box not defined for some shapes, define or ignore std::logic_error? Add BB if needed
 INSTANTIATE_TEST_SUITE_P(
     HelperFucntionsCheck, QueryHelperFunctions, ::testing::Values(
-        //==== Line ====
+        //==== 0.Line ====
        std::make_tuple(
            Shape{Line{{0.0, 0.0}, {2.0, 2.0}}},
            Shape{Line{{1.0, 1.0}, {3.0, 3.0}}},
@@ -193,7 +193,7 @@ INSTANTIATE_TEST_SUITE_P(
            true
        ),
 
-       //==== Triangle ====
+       //==== 1.Triangle ====
        std::make_tuple(
            Shape{Triangle{{0.0, 0.0}, {2.0, 0.0}, {0.0, 3.0}}},
            Shape{Triangle{{3.0, 3.0}, {4.0, 3.0}, {3.0, 4.0}}},
@@ -202,7 +202,7 @@ INSTANTIATE_TEST_SUITE_P(
            false
        ),
 
-       //==== Circle ====
+       //==== 2.Circle ====
        std::make_tuple(
            Shape{Circle{{1.0, 1.0}, 1.0}},
            Shape{Circle{{2.0, 2.0}, 0.5}},
@@ -211,7 +211,7 @@ INSTANTIATE_TEST_SUITE_P(
            true
        ),
 
-       //==== Rectangle ====
+       //==== 3.Rectangle ====
        std::make_tuple(
            Shape{Rectangle{{0.0, 0.0}, 2.0, 1.0}},
            Shape{Rectangle{{3.0, 3.0}, 1.0, 1.0}},
@@ -220,24 +220,21 @@ INSTANTIATE_TEST_SUITE_P(
            false
        ),
 
-       //==== Polygon ====
+       //==== 4.Polygon ====
        std::make_tuple(
-           Shape{Polygon{
-               std::vector<Point2D>{{0.0, 0.0}, {2.0, 0.0}, {2.0, 1.0}, {0.0, 1.0}},
-               BoundingBox(0.0, 0.0, 2.0, 1.0)
-           }},
+           Shape{Polygon{{{0.0, 0.0}, {2.0, 0.0}, {2.0, 1.0}, {0.0, 1.0}},}},
            Shape{Circle{{3.0, 3.0}, 0.5}},
            BoundingBox(0.0, 0.0, 2.0, 1.0),
            1.0,
            false
        ),
 
-       //==== RegularPolygon ====
+       //==== 5.RegularPolygon ====
        std::make_tuple(
            Shape{RegularPolygon{{0.0, 0.0}, 1.0, 6}},
            Shape{RegularPolygon{{1.5, 0.0}, 1.0, 6}},
-           BoundingBox(-1.0, -1.0, 1.0, 1.0),
-           2.0,
+           BoundingBox(-1.0, -std::sqrt(3)/2.0, 1.0, std::sqrt(3)/2.0),
+           1.0,
            true
        )
     )
