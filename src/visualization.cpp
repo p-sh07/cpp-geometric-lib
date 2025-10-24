@@ -2,6 +2,7 @@
 #include "geometry.hpp"
 
 #include <matplot/matplot.h>
+#include <range/v3/view/enumerate.hpp>
 #include <print>
 
 namespace geometry::visualization {
@@ -25,7 +26,7 @@ void Draw(std::span<geometry::Shape> shapes) {
     axis(equal);  // Squre view
     grid(on);     // Enable grid by default
 
-    for (const auto &[index, shape] : std::ranges::views::enumerate(shapes)) {
+    for (const auto &[index, shape] : ranges::views::enumerate(shapes)) {
         std::visit(Multilambda{[&](const Line &line) {
                                    const auto lines = line.Lines();
                                    plot(lines.x, lines.y)->line_width(2).color("yellow");
@@ -53,7 +54,7 @@ void Draw(std::span<geometry::Shape> shapes) {
                    shape);
 
         // Add shape number
-        const auto center = shape.visit([](auto &&s) { return s.Center(); });
+        const auto center = std::visit([](auto &&s) { return s.Center(); }, shape);
         auto t = text(center.x, center.y, std::to_string(index));
         t->font_size(14);
         t->color("black");
@@ -63,7 +64,7 @@ void Draw(std::span<geometry::Shape> shapes) {
     f->show();
 }
 
-void Draw(std::span<geometry::triangulation::DelaunayTriangle> triangles) {
+void Draw(std::span<triangulation::DelaunayTriangle> triangles) {
     using namespace geometry;
     using namespace matplot;
 
@@ -77,7 +78,7 @@ void Draw(std::span<geometry::triangulation::DelaunayTriangle> triangles) {
     axis(equal);  // Squre view
     grid(on);     // Enable grid by default
 
-    for (const auto &[index, d_triangle] : std::ranges::views::enumerate(triangles)) {
+    for (const auto &[index, d_triangle] : ranges::views::enumerate(triangles)) {
         geometry::Triangle tri{d_triangle.a, d_triangle.b, d_triangle.c};
         const auto lines = tri.Lines();
         plot(lines.x, lines.y)->line_width(2).color("cyan");
